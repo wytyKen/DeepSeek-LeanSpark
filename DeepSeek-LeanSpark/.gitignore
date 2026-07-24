@@ -1,0 +1,22 @@
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock.bak
+
+# 环境
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# 前端
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# 临时
+*.log
+leanspark_*.lean

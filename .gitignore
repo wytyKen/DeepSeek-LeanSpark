@@ -1,0 +1,55 @@
+# ===== Rust =====
+**/target/
+**/*.rs.bk
+**/Cargo.lock.bak
+
+# ===== Tauri 桌面壳 =====
+**/src-tauri/gen/
+**/src-tauri/target/
+**/src-tauri/Cargo.lock
+**/src-tauri/WixTools/
+
+# ===== Node / 前端 =====
+**/node_modules/
+**/dist/
+**/.vite/
+**/.parcel-cache/
+**/npm-debug.log*
+**/yarn-error.log*
+**/tsconfig.tsbuildinfo
+**/*.tsbuildinfo
+
+# ===== 环境变量 / 密钥 =====
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ===== IDE / 编辑器 =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ===== Lean4 临时文件 =====
+**/leanspark_*.lean
+**/.lake/
+**/build/
+
+# ===== 日志 / 临时 =====
+*.log
+*.tmp
+*.bak
+
+# ===== 操作系统 =====
+.DS_Store
+ehthumbs.db
+Desktop.ini
+
+# ===== Coverage / 测试产物 =====
+**/tarpaulin-report.html
+**/.cargo-timing.html

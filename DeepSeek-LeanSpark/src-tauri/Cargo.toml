@@ -1,0 +1,35 @@
+[package]
+name = "deepseek-leanspark-desktop"
+version = "0.1.0"
+description = "DeepSeek-LeanSpark 原生桌面壳（Tauri 2.x）"
+authors = ["DeepSeek-LeanSpark"]
+edition = "2021"
+rust-version = "1.77"
+
+[[bin]]
+name = "deepseek-leanspark-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri 2.x 核心
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-shell = "2"
+
+# 复用主 crate（DeepSeek-LeanSpark 后端）
+deepseek-leanspark = { path = ".." }
+
+# 异步运行时（与主 crate 一致）
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[features]
+# 默认启用自定义协议
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
