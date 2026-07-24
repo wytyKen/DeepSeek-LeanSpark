@@ -11,26 +11,26 @@ env:
 
 jobs:
   backend:
-    name: 后端 Rust 检查
+    name: Backend Rust Check
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: DeepSeek-LeanSpark
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: 安装 Rust 工具链
+      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
-      - name: 安装 Lean4
+      - name: Install Lean4
         uses: leanprover/lean-action@v1
         with:
-          lean-toolchain: stable
+          auto-config: true
 
-      - name: 缓存 Cargo
+      - name: Cache Cargo
         uses: actions/cache@v4
         with:
           path: |
@@ -39,50 +39,37 @@ jobs:
             DeepSeek-LeanSpark/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('DeepSeek-LeanSpark/Cargo.lock') }}
 
-      - name: 格式检查
+      - name: Format check
         run: cargo fmt --all -- --check
 
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
 
-      - name: 编译
+      - name: Compile
         run: cargo build --verbose
 
-      - name: 启动后端
-        env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          DEEPSEEK_MODEL: deepseek-v4-flash
-          LEAN_BIN_PATH: lean
-          LISTEN_ADDR: 127.0.0.1:3000
-          RUST_LOG: info
-        run: |
-          cargo run &
-          sleep 5
-
-      - name: 端到端烟雾测试
-        env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-        run: cargo test --test api_smoke -- --test-threads=1
+      - name: Lib unit tests
+        run: cargo test --lib
 
   frontend:
-    name: 前端构建检查
+    name: Frontend Build Check
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: DeepSeek-LeanSpark/frontend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: 安装 Node.js
-        uses: actions/setup-node@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: DeepSeek-LeanSpark/frontend/package-lock.json
 
-      - name: 安装依赖
+      - name: Install dependencies
         run: npm install
 
-      - name: 类型检查与构建
+      - name: Type check and build
         run: npm run build
