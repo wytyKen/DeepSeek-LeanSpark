@@ -27,11 +27,14 @@ pub struct AppState {
 
 pub async fn run() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
-    tracing_subscriber::fmt()
+    // 用 try_init() 而非 init()：当被 Tauri 桌面壳调用时，
+    // main.rs 已经初始化过全局 subscriber，这里再次 init 会 panic。
+    // try_init() 在已初始化时返回 Err，我们忽略即可。
+    let _ = tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
         )
-        .init();
+        .try_init();
 
     let api_key =
         std::env::var("DEEPSEEK_API_KEY").expect("DEEPSEEK_API_KEY must be set (see .env.example)");
