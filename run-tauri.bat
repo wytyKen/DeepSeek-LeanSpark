@@ -65,10 +65,11 @@ goto :run_tauri
 :install_tauri
 echo [INFO] tauri-cli not installed. Auto-installing - takes 2-3 min...
 echo.
-call cargo install tauri-cli --version 2
+REM Install latest tauri-cli (currently 2.x). Version qualifier avoided due to bat escaping issues.
+cargo install tauri-cli
 if errorlevel 1 (
     echo [ERROR] tauri-cli install failed
-    echo Please run manually: cargo install tauri-cli --version 2
+    echo Please run manually: cargo install tauri-cli
     pause
     exit /b 1
 )
