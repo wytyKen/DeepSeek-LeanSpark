@@ -16,7 +16,7 @@
 | API Key 配置 | `DeepSeek-LeanSpark/.env`（变量 `DEEPSEEK_API_KEY`，已 gitignore） |
 | 系统提示词 | `DeepSeek-LeanSpark/prompts/agent-prompt.md` |
 | 当前 git 分支 | `main`（跟踪 `origin/main`，已同步） |
-| 最新提交 | `50ba610`（docs: update handoff doc - mark workspace clean） |
+| 最新提交 | `412994c`（fix(ci): rustfmt read_file.rs and upgrade actions/cache to v5） |
 | 工作区状态 | **干净**（无未提交改动） |
 
 ---
@@ -280,8 +280,8 @@ cargo clippy --manifest-path DeepSeek-LeanSpark/Cargo.toml --all-targets -- -D w
 - ✅ `cargo fmt --check` 通过（已修复 read_file.rs 格式问题）
 - ✅ `cargo clippy -- -D warnings` 通过
 - ✅ `npm run build` 通过
-- ✅ CI 已修复：fmt 格式 + actions/cache@v5（待 push 后验证）
-- ✅ 工作区干净，所有改动已提交并推送到 GitHub（`main` 分支，最新 `50ba610`）
+- ✅ CI 已修复并通过验证：fmt 格式 + actions/cache@v5（CI #27 Success）
+- ✅ 工作区干净，所有改动已提交并推送到 GitHub（`main` 分支，最新 `412994c`，CI #27 Success）
 - ✅ Tauri 基础框架可用（`cargo tauri dev` 可启动）
 - ✅ GitHub 仓库已存在且为 public：`https://github.com/wytyKen/DeepSeek-LeanSpark`
 - ✅ CI（ci.yml）基本配置正确并通过（Node 22 + checkout@v5 + elan）
