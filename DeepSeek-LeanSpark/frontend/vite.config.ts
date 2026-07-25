@@ -25,4 +25,13 @@ export default defineConfig({
     // Tauri 推荐：生产构建用较小 chunk 策略
     target: isTauriBuild ? 'es2021' : 'modules',
   },
+  test: {
+    // vitest 配置：jsdom 环境 + 全局 API + setupFiles
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    css: true, // 加载 CSS（KaTeX 等需要）
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['node_modules', 'dist'],
+  },
 });

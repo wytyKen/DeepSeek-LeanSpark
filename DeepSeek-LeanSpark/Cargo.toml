@@ -35,6 +35,8 @@ regex = "1"
 [dev-dependencies]
 # 端到端烟雾测试用 blocking 客户端，见 tests/api_smoke.rs
 reqwest = { version = "0.12", features = ["json", "rustls-tls", "blocking"], default-features = false }
+# 单测临时目录（agent_loop / tools / workspace 测试用）
+tempfile = "3"
 
 [profile.release]
 opt-level = 3

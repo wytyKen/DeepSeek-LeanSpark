@@ -73,3 +73,90 @@ impl Tool for ProofStateTool {
         }))?)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::Value;
+
+    async fn call_tool(code: &str) -> Value {
+        let tool = ProofStateTool::new();
+        let args = json!({ "lean_code": code });
+        let s = tool.call(&args).await.unwrap();
+        serde_json::from_str(&s).unwrap()
+    }
+
+    #[test]
+    fn spec_has_correct_name() {
+        let tool = ProofStateTool::new();
+        let spec = tool.spec();
+        assert_eq!(spec["function"]["name"], "get_proof_state");
+        assert_eq!(spec["function"]["parameters"]["required"][0], "lean_code");
+    }
+
+    #[tokio::test]
+    async fn extracts_theorem_and_lemma_declarations() {
+        let code = r#"
+theorem add_comm (a b : Nat) : a + b = b + a := by
+  sorry
+
+lemma helper (x : Nat) : x + 0 = x := by
+  rfl
+"#;
+        let v = call_tool(code).await;
+        let decls = v["declarations"].as_array().unwrap();
+        assert_eq!(decls.len(), 2, "应提取 2 个声明");
+        assert_eq!(decls[0]["kind"], "theorem");
+        assert_eq!(decls[0]["name"], "add_comm");
+        assert_eq!(decls[1]["kind"], "lemma");
+        assert_eq!(decls[1]["name"], "helper");
+    }
+
+    #[tokio::test]
+    async fn detects_sorry_and_admit() {
+        let with_sorry = call_tool("theorem t : True := by sorry").await;
+        assert_eq!(with_sorry["has_sorry"], true);
+
+        let with_admit = call_tool("theorem t : True := by admit").await;
+        assert_eq!(with_admit["has_sorry"], true);
+
+        let clean = call_tool("theorem t : True := by trivial").await;
+        assert_eq!(clean["has_sorry"], false);
+    }
+
+    #[tokio::test]
+    async fn counts_by_blocks() {
+        let code = "theorem t : True := by trivial\ntheorem s : True := by rfl";
+        let v = call_tool(code).await;
+        assert_eq!(v["by_blocks_count"], 2, "应统计 2 个 by 块");
+    }
+
+    #[tokio::test]
+    async fn empty_code_returns_empty_declarations() {
+        let v = call_tool("").await;
+        assert_eq!(v["success"], true);
+        assert_eq!(v["declarations"].as_array().unwrap().len(), 0);
+        assert_eq!(v["has_sorry"], false);
+        assert_eq!(v["by_blocks_count"], 0);
+    }
+
+    #[tokio::test]
+    async fn ignores_non_declaration_lines_with_theorem_substring() {
+        // "theorem" 出现在注释或字符串中，但不是行首声明，不应被提取
+        let code = "-- this is not a theorem\ntypeof_theorem : True := by trivial";
+        let v = call_tool(code).await;
+        let decls = v["declarations"].as_array().unwrap();
+        assert_eq!(decls.len(), 0, "注释/非声明行的 theorem 不应被提取");
+    }
+
+    #[tokio::test]
+    async fn handles_missing_lean_code_argument() {
+        let tool = ProofStateTool::new();
+        // proof_state 对缺失 lean_code 用 unwrap_or("")，不报错
+        let args = json!({});
+        let s = tool.call(&args).await.unwrap();
+        let v: Value = serde_json::from_str(&s).unwrap();
+        assert_eq!(v["success"], true);
+        assert_eq!(v["declarations"].as_array().unwrap().len(), 0);
+    }
+}

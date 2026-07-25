@@ -35,6 +35,7 @@ export function CopyButton({ text, label = '复制', size = 'sm' }: Props) {
   };
 
   const fontSize = size === 'sm' ? 11 : 13;
+  const displayLabel = copied ? '已复制' : label;
   return (
     <button
       type="button"
@@ -49,9 +50,9 @@ export function CopyButton({ text, label = '复制', size = 'sm' }: Props) {
         borderRadius: 4,
         cursor: 'pointer',
       }}
-      aria-label={label}
+      aria-label={displayLabel}
     >
-      {copied ? '已复制' : label}
+      {displayLabel}
     </button>
   );
 }

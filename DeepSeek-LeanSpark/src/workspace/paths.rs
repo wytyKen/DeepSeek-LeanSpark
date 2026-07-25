@@ -52,11 +52,20 @@ pub fn ensure_within(root: &Path, target: &Path) -> Result<PathBuf> {
 
 /// 对完全不存在的路径（父目录也不存在）做校验：
 /// 通过逐段拼接并规范化 `..` 来判断是否在 root 内。
+///
+/// 注意：调用方传入的 `target` 通常是 `canonical_root.join(rel)` 后的绝对路径，
+/// 在 Windows 上 canonicalize 会带上 `\\?\` UNC 前缀。如果直接遍历 components，
+/// `Component::Prefix` 会被错误地当作"非法前缀"拒绝。因此这里先 strip_prefix
+/// canonical_root 得到相对部分，再逐段处理。
 fn validate_nonexistent_path(root: &Path, target: &Path) -> Result<PathBuf> {
     let canonical_root = root.canonicalize()?;
-    // 把 target 各段拼接到 root，遇到 `..` 弹栈，遇到 `.` 跳过
+    // target 必须以 canonical_root 为前缀（调用方已 join），否则视为越界
+    let rel = target
+        .strip_prefix(&canonical_root)
+        .map_err(|_| anyhow!("路径 {:?} 超出工作区根目录 {:?}", target, root))?;
+    // 遍历相对部分的各段：遇 `..` 弹栈，遇 `.` 跳过，遇 Normal 压栈
     let mut acc = canonical_root.clone();
-    for comp in target.components() {
+    for comp in rel.components() {
         use std::path::Component;
         match comp {
             Component::CurDir => {}
@@ -67,6 +76,7 @@ fn validate_nonexistent_path(root: &Path, target: &Path) -> Result<PathBuf> {
             }
             Component::Normal(s) => acc.push(s),
             Component::Prefix(_) | Component::RootDir => {
+                // strip_prefix 成功后不应再出现这些段，出现即视为非法
                 return Err(anyhow!("路径 {:?} 包含非法前缀", target));
             }
         }

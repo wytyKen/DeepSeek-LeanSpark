@@ -148,3 +148,104 @@ impl Tool for SearchMathlibTool {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::Value;
+
+    async fn call_tool(query: &str) -> Value {
+        let tool = SearchMathlibTool::new();
+        let args = json!({ "query": query });
+        let s = tool.call(&args).await.unwrap();
+        serde_json::from_str(&s).unwrap()
+    }
+
+    #[test]
+    fn spec_has_correct_name() {
+        let tool = SearchMathlibTool::new();
+        let spec = tool.spec();
+        assert_eq!(spec["function"]["name"], "search_mathlib");
+        assert_eq!(spec["function"]["parameters"]["required"][0], "query");
+    }
+
+    #[tokio::test]
+    async fn search_add_returns_addition_lemmas() {
+        let v = call_tool("add").await;
+        assert_eq!(v["success"], true);
+        let results = v["results"].as_array().unwrap();
+        let names: Vec<&str> = results
+            .iter()
+            .map(|r| r["name"].as_str().unwrap())
+            .collect();
+        assert!(names.contains(&"add_comm"), "应含 add_comm");
+        assert!(names.contains(&"add_assoc"), "应含 add_assoc");
+        assert!(names.contains(&"add_zero"), "应含 add_zero");
+        assert!(names.contains(&"zero_add"), "应含 zero_add");
+    }
+
+    #[tokio::test]
+    async fn search_continuous_returns_continuous_lemmas() {
+        let v = call_tool("continuous").await;
+        assert_eq!(v["success"], true);
+        let results = v["results"].as_array().unwrap();
+        assert!(!results.is_empty(), "continuous 应有匹配");
+        let names: Vec<&str> = results
+            .iter()
+            .map(|r| r["name"].as_str().unwrap())
+            .collect();
+        assert!(names.contains(&"Continuous.comp"), "应含 Continuous.comp");
+        assert!(names.contains(&"Continuous.add"), "应含 Continuous.add");
+    }
+
+    #[tokio::test]
+    async fn search_nonexistent_returns_failure_with_suggestions() {
+        let v = call_tool("zzz_nonexistent_xyz").await;
+        assert_eq!(v["success"], false);
+        let msg = v["message"].as_str().unwrap();
+        assert!(msg.contains("未找到"), "应提示未找到");
+        assert!(msg.contains("建议"), "应给建议关键词");
+    }
+
+    #[tokio::test]
+    async fn search_is_case_insensitive() {
+        // 小写 "continuous" 与大写 "Continuous" 都应匹配
+        let lower = call_tool("continuous").await;
+        let upper = call_tool("Continuous").await;
+        let lower_count = lower["results"].as_array().unwrap().len();
+        let upper_count = upper["results"].as_array().unwrap().len();
+        assert_eq!(lower_count, upper_count, "大小写不敏感应返回相同数量");
+    }
+
+    #[tokio::test]
+    async fn search_empty_query_returns_all() {
+        // 空字符串 query，所有 name 都 contains("")，返回全部
+        let v = call_tool("").await;
+        assert_eq!(v["success"], true);
+        let count = v["results"].as_array().unwrap().len();
+        assert!(count > 10, "空 query 应返回大量内置引理");
+    }
+
+    #[tokio::test]
+    async fn search_tactic_keywords() {
+        let v = call_tool("ring").await;
+        assert_eq!(v["success"], true);
+        let names: Vec<&str> = v["results"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| r["name"].as_str().unwrap())
+            .collect();
+        assert!(names.contains(&"ring"), "应含 ring tactic");
+    }
+
+    #[tokio::test]
+    async fn search_missing_query_argument_uses_empty_string() {
+        // query 缺失时 unwrap_or("") → 返回全部（不报错）
+        let tool = SearchMathlibTool::new();
+        let args = json!({});
+        let s = tool.call(&args).await.unwrap();
+        let v: Value = serde_json::from_str(&s).unwrap();
+        assert_eq!(v["success"], true);
+    }
+}
