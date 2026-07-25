@@ -18,7 +18,7 @@ jobs:
         working-directory: DeepSeek-LeanSpark
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -60,7 +60,7 @@ jobs:
         working-directory: DeepSeek-LeanSpark/frontend
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install Node.js
         uses: actions/setup-node@v5
