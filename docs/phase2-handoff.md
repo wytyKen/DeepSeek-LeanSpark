@@ -16,7 +16,7 @@
 | API Key 配置 | `DeepSeek-LeanSpark/.env`（变量 `DEEPSEEK_API_KEY`，已 gitignore） |
 | 系统提示词 | `DeepSeek-LeanSpark/prompts/agent-prompt.md` |
 | 当前 git 分支 | `main`（跟踪 `origin/main`，已同步） |
-| 最新提交 | `3f0b995`（docs: rewrite root README + Phase 2 handoff doc） |
+| 最新提交 | `50ba610`（docs: update handoff doc - mark workspace clean） |
 | 工作区状态 | **干净**（无未提交改动） |
 
 ---
@@ -57,13 +57,14 @@
 - `run-tauri.bat`：Windows 启动脚本（纯 ASCII，goto labels）
 
 **待完成（Phase 2 核心任务）**：
-1. 验证 `cargo tauri build` 能成功产出多平台安装包
-2. 添加 `.github/workflows/release.yml`（tag 触发，多平台构建，上传 GitHub Release）
-3. Tauri 应用内 API Key 设置 UI（替代手动编辑 .env）
-4. Lean4 打包策略决策与实现
-5. 创建 `docs/phase2.md` 设计文档
-6. 更新所有文档反映 Phase 2 完成
-7. 提交所有未提交改动并推送 GitHub
+1. 修复 lib.rs 启动 panic 风险（详见 3.1b）
+2. 验证 `cargo tauri build` 能成功产出多平台安装包
+3. 添加 `.github/workflows/release.yml`（tag 触发，多平台构建，上传 GitHub Release）
+4. Tauri 应用内 API Key 设置 UI（替代手动编辑 .env）
+5. Lean4 打包策略决策与实现
+6. 补全 ci.yml 前端测试（npm test）
+7. 创建 `docs/phase2.md` 设计文档
+8. 更新所有文档反映 Phase 2 完成
 
 ---
 
@@ -277,7 +278,7 @@ cargo clippy --manifest-path DeepSeek-LeanSpark/Cargo.toml --all-targets -- -D w
 - ✅ `cargo fmt --check` 通过
 - ✅ `cargo clippy -- -D warnings` 通过
 - ✅ `npm run build` 通过
-- ✅ 工作区干净，所有改动已提交并推送到 GitHub（`main` 分支，最新 `3f0b995`）
+- ✅ 工作区干净，所有改动已提交并推送到 GitHub（`main` 分支，最新 `50ba610`）
 - ✅ Tauri 基础框架可用（`cargo tauri dev` 可启动）
 - ✅ GitHub 仓库已存在且为 public：`https://github.com/wytyKen/DeepSeek-LeanSpark`
 - ✅ CI（ci.yml）基本配置正确并通过（Node 22 + checkout@v5 + elan）
