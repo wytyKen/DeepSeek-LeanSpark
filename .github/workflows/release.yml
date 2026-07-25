@@ -1,0 +1,120 @@
+name: Release
+
+# Tag 触发：推送 v* 格式的 tag 时构建三平台安装包并发布到 GitHub Release。
+# 例如：git tag v0.2.0 && git push origin v0.2.0
+#
+# 设计要点：
+# - 三平台并行（windows-latest / macos-latest / ubuntu-latest）
+# - 每个 job 用 cargo tauri build 产出原生安装包
+# - 用 softprops/action-gh-release 上传产物到对应 tag 的 Release
+# - 不依赖 CI workflow，独立运行
+#
+# 已知约束（详见 docs/phase2.md）：
+# - Ubuntu 需安装 webkit2gtk 等系统依赖
+# - macOS 需在 aarch64-apple-darwin 和 x86_64-apple-darwin 之间处理架构
+#   当前简化为 universal 二进制（target=x86_64-apple-darwin，运行时通过 Rosetta 兼容）
+# - 不签名（开源项目，用户首次启动需在系统设置中允许运行）
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ============ 三平台并行构建 ============
+  build:
+    name: Build ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: windows
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            label: macos-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            label: macos-x86_64
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            label: linux
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: DeepSeek-LeanSpark
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
+      # Linux 系统依赖：webkit2gtk 等 Tauri 必需库
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: DeepSeek-LeanSpark/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: DeepSeek-LeanSpark/frontend
+
+      - name: Cache Cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            DeepSeek-LeanSpark/src-tauri/target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-release-${{ hashFiles('DeepSeek-LeanSpark/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-cargo-release-
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: DeepSeek-LeanSpark
+          tagName: ${{ github.ref_name }}
+          releaseName: 'DeepSeek-LeanSpark ${{ github.ref_name }}'
+          releaseBody: |
+            ## DeepSeek-LeanSpark ${{ github.ref_name }}
+
+            原生桌面安装包，请根据平台选择对应文件下载：
+
+            - **Windows**: `.msi`（推荐，标准安装格式）或 `.exe`（NSIS）
+            - **macOS**: `_aarch64.dmg`（Apple Silicon M1/M2）或 `_x64.dmg`（Intel）
+            - **Linux**: `.deb` 或 `.AppImage`
+
+            ### 首次使用
+
+            1. 安装完成后启动应用
+            2. 在应用内「设置」中填入 DeepSeek API Key（从 https://platform.deepseek.com 获取）
+            3. 应用会自动检测 Lean4 是否已安装；若未安装，按提示用 elan 安装：
+               - Windows PowerShell: `Invoke-WebRequest -Uri "https://raw.githubusercontent.com/leanprover/elan/elan-init/elan-init.ps1" -OutFile elan-init.ps1; ./elan-init.ps1`
+               - macOS/Linux: `curl https://raw.githubusercontent.com/leanprover/elan/elan-init/elan-init.sh -sSf | sh`
+            4. 安装 Lean4 后重启应用，开始使用
+
+            > 注：未配置 API Key 也能进入应用界面；未安装 Lean4 时 Agent 仍可生成证明代码但无法验证正确性。
+          releaseDraft: false
+          prerelease: false
+          args: --target ${{ matrix.target }}

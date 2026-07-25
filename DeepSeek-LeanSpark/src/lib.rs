@@ -7,7 +7,7 @@ pub mod tools;
 pub mod workspace;
 
 pub use agent::AgentLoop;
-pub use deepseek::DeepSeekClient;
+pub use deepseek::{DeepSeekClient, SharedChatClient};
 pub use lean::LeanRunner;
 pub use workspace::WorkspaceManager;
 
@@ -18,7 +18,7 @@ use tracing_subscriber::EnvFilter;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub deepseek: Arc<DeepSeekClient>,
+    pub deepseek: Arc<SharedChatClient>,
     pub lean: Arc<LeanRunner>,
     pub tools: Arc<tools::ToolRegistry>,
     pub agent: Arc<AgentLoop>,
@@ -36,13 +36,31 @@ pub async fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let api_key =
-        std::env::var("DEEPSEEK_API_KEY").expect("DEEPSEEK_API_KEY must be set (see .env.example)");
+    // API Key 延迟初始化（Phase 2 关键修复）：
+    // - 旧实现用 expect("DEEPSEEK_API_KEY must be set")，未配置 key 时 Tauri 应用直接 panic，
+    //   用户无法进入设置界面。
+    // - 新实现用 ok() 容错：未配置 key 时 SharedChatClient::new(None)，应用可正常启动；
+    //   用户通过 UI 设置 key 后调 replace_client 注入真实客户端。
+    //   .env 仍是 Web 形态开发者配置 key 的入口（dotenvy::dotenv 已加载）。
+    let api_key = std::env::var("DEEPSEEK_API_KEY").ok();
     let model = std::env::var("DEEPSEEK_MODEL").unwrap_or_else(|_| "deepseek-v4-flash".to_string());
     let lean_path = std::env::var("LEAN_BIN_PATH").unwrap_or_else(|_| "lean".to_string());
     let addr = std::env::var("LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:3000".to_string());
 
-    let deepseek = Arc::new(DeepSeekClient::new(api_key, model));
+    let shared_client = match api_key {
+        Some(key) if !key.is_empty() => {
+            tracing::info!("DeepSeek API Key 已从环境变量加载，模型：{}", model);
+            SharedChatClient::new(Some(DeepSeekClient::new(key, model)))
+        }
+        _ => {
+            tracing::warn!(
+                "DEEPSEEK_API_KEY 未配置或为空，应用以「未配置」状态启动。\
+                 请通过 UI 设置界面填入 API Key 后再发起对话。"
+            );
+            SharedChatClient::new(None)
+        }
+    };
+    let deepseek = Arc::new(shared_client);
     let lean = Arc::new(LeanRunner::new(lean_path));
     let workspace = Arc::new(WorkspaceManager::new());
     // 启动时先注册基础工具，工作区工具在工作区打开后通过 ToolRegistry::register_workspace_tools 注册

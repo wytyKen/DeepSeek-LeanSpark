@@ -1,6 +1,6 @@
 [package]
 name = "deepseek-leanspark-desktop"
-version = "0.1.0"
+version = "0.2.0"
 description = "DeepSeek-LeanSpark 原生桌面壳（Tauri 2.x）"
 authors = ["DeepSeek-LeanSpark"]
 edition = "2021"

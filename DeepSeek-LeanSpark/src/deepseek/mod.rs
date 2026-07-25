@@ -1,8 +1,10 @@
 mod client;
+mod shared;
 
 use anyhow::Result;
 pub use client::{ChatResponse, DeepSeekClient, ToolCall};
 use serde_json::Value;
+pub use shared::SharedChatClient;
 
 /// 聊天客户端抽象：AgentLoop 依赖此 trait 而非具体 DeepSeekClient，便于单测 mock。
 #[async_trait::async_trait]

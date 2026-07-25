@@ -21,6 +21,36 @@ impl LeanRunner {
         Self { lean_bin }
     }
 
+    /// 返回当前使用的 lean 二进制路径字符串（供 API 返回给前端展示）
+    pub fn lean_bin(&self) -> &str {
+        &self.lean_bin
+    }
+
+    /// 检测 `lean --version` 是否可执行。
+    ///
+    /// 返回 (installed, version_output)：
+    /// - installed=true 时 version_output=Some("Lean version ...") （stdout + stderr 合并）
+    /// - installed=false 时 version_output=None
+    ///
+    /// 此方法不区分 PATH 中无 lean 二进制和 lean 二进制存在但 --version 失败两种情况，
+    /// 因为对终端用户而言都需要重新安装/配置 PATH。
+    pub async fn check_version(&self) -> (bool, Option<String>) {
+        match Command::new(&self.lean_bin).arg("--version").output().await {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                let combined = if stdout.is_empty() { stderr } else { stdout };
+                // `lean --version` 成功时退出码 0，且 stdout 应包含 "Lean version"
+                if output.status.success() && combined.contains("Lean") {
+                    (true, Some(combined.trim().to_string()))
+                } else {
+                    (false, None)
+                }
+            }
+            Err(_) => (false, None),
+        }
+    }
+
     /// 写入临时文件，执行 `lean <file>`，返回编译结果
     pub async fn run(&self, code: &str) -> Result<LeanResult> {
         let tmp = std::env::temp_dir().join(format!("leanspark_{}.lean", uuid::Uuid::new_v4()));
@@ -217,5 +247,53 @@ mod tests {
             .check_file(&PathBuf::from("/nonexistent/path/file.lean"))
             .await;
         assert!(result.is_err(), "读取不存在的文件应返回 Err");
+    }
+
+    // ============ check_version（Phase 2 新增） ============
+
+    #[tokio::test]
+    async fn check_version_returns_false_when_lean_binary_missing() {
+        // 不存在的 lean 二进制：check_version 应返回 (false, None)，不 panic
+        let runner = make_broken_runner();
+        let (installed, version) = runner.check_version().await;
+        assert!(!installed, "lean 二进制不存在时 installed 应为 false");
+        assert!(version.is_none(), "lean 二进制不存在时 version 应为 None");
+    }
+
+    #[tokio::test]
+    async fn check_version_returns_true_when_lean_available() {
+        // 仅当 CI / 本机 PATH 上有真实 lean 时才执行此测试
+        // 通过 `which lean` 检测；不可用则跳过
+        let which = Command::new("where").arg("lean").output().await;
+        let lean_path = match which {
+            Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .next()
+                .unwrap_or("lean")
+                .to_string(),
+            _ => {
+                // PATH 上无 lean，跳过此测试（不视为失败）
+                eprintln!("[skip] PATH 上未找到 lean，跳过 check_version_returns_true_when_lean_available");
+                return;
+            }
+        };
+        let runner = LeanRunner::new(lean_path);
+        let (installed, version) = runner.check_version().await;
+        assert!(installed, "PATH 上有 lean 时 installed 应为 true");
+        assert!(version.is_some(), "installed=true 时 version 应为 Some");
+        let v = version.unwrap();
+        assert!(v.contains("Lean"), "version 输出应包含 'Lean'，实际: {}", v);
+    }
+
+    #[test]
+    fn lean_bin_returns_configured_path() {
+        let runner = LeanRunner::new("/custom/path/to/lean".to_string());
+        assert_eq!(runner.lean_bin(), "/custom/path/to/lean");
+    }
+
+    #[test]
+    fn lean_bin_returns_default_when_configured_with_bare_name() {
+        let runner = LeanRunner::new("lean".to_string());
+        assert_eq!(runner.lean_bin(), "lean");
     }
 }

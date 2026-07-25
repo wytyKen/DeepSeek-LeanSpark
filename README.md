@@ -87,22 +87,26 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/leanprover/elan/elan-i
 lean --version
 ```
 
-### 方式二：下载安装包运行（Phase 2 完成后）
+### 方式二：下载安装包运行（Phase 2 已完成）
 
-Phase 2 的目标是产出可分发的原生桌面安装包，让终端用户**无需安装 Rust/Node.js/Lean4 工具链**，只下载一个安装包即可使用。
+Phase 2 已产出可分发的原生桌面安装包，让终端用户**无需安装 Rust/Node.js 工具链**，只下载一个安装包即可使用（仍需安装 Lean4，应用内提供引导）。
 
 #### 终端用户
 
-1. 前往 GitHub 仓库的 **Releases** 页面
+1. 前往 GitHub 仓库的 **[Releases](https://github.com/wytyKen/DeepSeek-LeanSpark/releases)** 页面
 2. 下载对应平台的安装包：
-   - Windows: `DeepSeek-LeanSpark_<version>_x64-setup.exe` 或 `.msi`
-   - macOS: `DeepSeek-LeanSpark_<version>_aarch64.dmg`（Apple Silicon）/ `x64.dmg`（Intel）
+   - Windows: `DeepSeek-LeanSpark_<version>_x64_en-US.msi`（推荐，标准格式）或 `_x64-setup.exe`（NSIS）
+   - macOS: `DeepSeek-LeanSpark_<version>_aarch64.dmg`（Apple Silicon M1/M2）/ `_x64.dmg`（Intel）
    - Linux: `DeepSeek-LeanSpark_<version>_amd64.deb` 或 `.AppImage`
 3. 安装并启动应用
-4. 在应用内填入 DeepSeek API Key（Phase 2 提供设置界面，无需编辑 `.env`）
-5. 开始使用
+4. 在应用内「设置」中填入 DeepSeek API Key（从 https://platform.deepseek.com 获取）
+5. 应用会自动检测 Lean4 是否已安装；若未安装，按提示用 elan 安装：
+   - Windows PowerShell: `Invoke-WebRequest -Uri "https://raw.githubusercontent.com/leanprover/elan/elan-init/elan-init.ps1" -OutFile elan-init.ps1; ./elan-init.ps1`
+   - macOS/Linux: `curl https://raw.githubusercontent.com/leanprover/elan/elan-init/elan-init.sh -sSf | sh`
+6. 安装 Lean4 后重启应用，开始使用
 
-> **当前状态**：Phase 2 的 Tauri 集成基础框架已就绪（`cargo tauri dev` 可用，`cargo tauri build` 可本地打包），但 GitHub Releases 自动化流水线与终端用户安装包尚未发布。在 Phase 2 完成前，请使用方式一。
+> **注**：未配置 API Key 也能进入应用界面（应用启动时自动弹出设置 Modal）；未安装 Lean4 时 Agent 仍可生成证明代码但无法验证正确性。
+> macOS 用户首次启动需在「系统设置 → 隐私与安全性」中允许运行（开源项目未签名）。
 
 #### 开发者自行构建安装包
 
@@ -142,6 +146,7 @@ deepseek-leanspark/
 | Phase 1 完整实现说明（架构、API、工具、测试） | [DeepSeek-LeanSpark/README.md](./DeepSeek-LeanSpark/README.md) |
 | Phase 1 设计文档 | [docs/phase1.md](./docs/phase1.md) |
 | Phase 1.5 增强设计（Tauri、右侧栏、依赖图） | [docs/phase1.5-design.md](./docs/phase1.5-design.md) |
+| Phase 2 设计文档（原生分发、运行时配置、release 流程） | [docs/phase2.md](./docs/phase2.md) |
 | 项目知识基线 | [docs/leanspark-guide.html](./docs/leanspark-guide.html) |
 
 ## 测试
@@ -149,10 +154,10 @@ deepseek-leanspark/
 ```bash
 cd DeepSeek-LeanSpark
 
-# Rust 单元测试（111 个，无需后端运行）
+# Rust 单元测试（129 个，无需后端运行）
 cargo test --lib
 
-# 前端组件测试（49 个）
+# 前端组件测试（97 个）
 cd frontend && npm test -- --run
 
 # Rust 集成烟雾测试（需先启动后端：cargo run）

@@ -2,6 +2,8 @@
 
 本文档描述 Phase 1.5 的设计与实现，是 Phase 1（Web MVP）与 Phase 2（Tauri 原生壳）之间的过渡阶段。所有改动仍在 Web 形态下完成，Phase 2 时用 Tauri 包壳即可。
 
+> **后续阶段**：Phase 2 已完成原生分发、运行时 API Key 配置、Lean4 安装引导与 GitHub Releases 自动化，详见 [phase2.md](./phase2.md)。
+
 ---
 
 ## 0. 目标与范围

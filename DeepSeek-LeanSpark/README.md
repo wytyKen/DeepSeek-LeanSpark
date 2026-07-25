@@ -125,13 +125,13 @@ cargo build --release          # 产物在 target/release/deepseek-leanspark
 
 ## 原生桌面壳（Tauri 2.x）
 
-本项目支持打包为原生桌面应用，无需浏览器，提供系统文件对话框、原生窗口体验。
+本项目支持打包为原生桌面应用，无需浏览器，提供系统文件对话框、原生窗口体验。Phase 2 已完成原生分发能力，详见 [../docs/phase2.md](../docs/phase2.md)。
 
 ### 环境要求
 
 - Rust 1.77+
 - WebView2（Windows 10+ 自带；macOS 用 WebKit；Linux 用 WebKitGTK）
-- Tauri CLI：`cargo install tauri-cli --version "^2"`
+- Tauri CLI：`cargo install tauri-cli`（**不要带 `--version`**，会触发 semver 解析错误）
 
 ### 开发模式（带热重载）
 
@@ -154,6 +154,13 @@ cargo tauri build
 
 产物在 `src-tauri/target/release/bundle/`。
 
+### Windows 打包注意事项
+
+- **WiX 工具链**：首次构建会自动下载 WiX 3.14 到 `C:\Users\<user>\AppData\Local\tauri\`（Tauri 2.x 硬编码该路径，`TAURI_BUNDLER_CACHE_DIR` 环境变量无效）
+- **NSIS 工具链**：同样缓存在上述路径
+- **沙箱环境**：若在受限沙箱中构建，需放行该路径；或修改 `tauri.conf.json` 的 `bundle.targets` 为 `["nsis"]` 仅产出 NSIS（仍需访问缓存路径但下载量小）
+- **批处理脚本**：`run-tauri.bat` 必须纯 ASCII，用 goto labels 而非嵌套 if 块
+
 ### Web 形态 vs 原生形态
 
 | 特性 | Web 形态（npm run dev + cargo run） | 原生形态（cargo tauri dev） |
@@ -162,8 +169,38 @@ cargo tauri build
 | 窗口 | 浏览器标签页 | 原生窗口 |
 | 后端 | 独立进程（cargo run） | Tauri 主进程内 |
 | 部署 | 需要浏览器 | 单一可执行文件 |
+| API Key 配置 | 编辑 `.env` | 应用内「设置」Modal（Phase 2） |
+| Lean4 检测 | 用户自行确认 | 启动时自动检测 + 引导安装（Phase 2） |
 
 两种形态共享同一套前后端代码，仅运行环境不同。
+
+### Phase 2 新增：运行时 API Key 配置
+
+Phase 2 引入 `SharedChatClient` 包装器（`src/deepseek/shared.rs`），支持运行时替换客户端：
+
+- **Web 形态**：仍通过 `.env` 配置 `DEEPSEEK_API_KEY`，启动时自动加载
+- **Tauri 形态**：未配置 key 时应用可正常启动，弹出设置 Modal 让用户输入
+- API Key 仅保存在内存中，应用关闭后不持久化（安全与便利的折中）
+- 后端新增 `/api/settings/api-key` GET/POST 接口供前端调用
+
+### Phase 2 新增：Lean4 安装引导
+
+应用启动时自动调用 `/api/lean/check-install` 检测 Lean4 是否可用：
+
+- 已安装：header 显示 "Lean ✓ <version>"
+- 未安装：弹出引导 Modal，展示平台相关的 elan 安装命令（可一键复制）
+- 用户可关闭 Modal 继续使用应用（不强制阻塞）
+
+### Phase 2 新增：GitHub Releases 自动化
+
+推送 `v*` 格式的 tag 会触发 `.github/workflows/release.yml`，三平台并行构建并上传到 Releases：
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+详见 [../docs/phase2.md](../docs/phase2.md) 第 2.3 节。
 
 ## 项目结构
 

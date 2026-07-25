@@ -4,11 +4,15 @@ import { useEffect, useState } from 'react';
 import { useAgent, lastLeanCodeFromMessages } from './hooks/useAgent';
 import { useWorkspace } from './hooks/useWorkspace';
 import { useProofGraph } from './hooks/useProofGraph';
+import { useSettings } from './hooks/useSettings';
+import { useLeanInstall } from './hooks/useLeanInstall';
 import { ChatPanel } from './components/chat/ChatPanel';
 import { RightSidebar } from './components/sidebar/RightSidebar';
 import { WorkspaceSwitcher } from './components/workspace/WorkspaceSwitcher';
 import { CodeEditor } from './components/workspace/CodeEditor';
 import { LatexModal } from './components/common/LatexModal';
+import { SettingsModal } from './components/common/SettingsModal';
+import { LeanInstallModal } from './components/common/LeanInstallModal';
 import 'katex/dist/katex.min.css';
 import './styles/chat.css';
 
@@ -17,6 +21,10 @@ export default function App() {
   const { messages, send, reset, isRunning } = useAgent({ thinking });
   const workspace = useWorkspace();
   const proofGraph = useProofGraph();
+  // API Key 设置：启动时自动拉取配置状态；未配置时 forceOpen=true 强制弹 Modal
+  const settings = useSettings();
+  // Lean4 安装检测：启动时拉取；未安装时弹引导 Modal（用户可关闭，不强制阻塞）
+  const leanInstall = useLeanInstall();
 
   // 当前在编辑器中打开的文件
   const [openFile, setOpenFile] = useState<string | null>(null);
@@ -26,6 +34,23 @@ export default function App() {
 
   // 当前要放大的 LaTeX 公式
   const [latexModal, setLatexModal] = useState<string | null>(null);
+
+  // 设置 Modal 显隐：
+  // - settingsOpen=false 表示用户主动关闭过 Modal（仅 forceOpen=false 时生效）
+  // - 当 settings.configured=false 时，无论 settingsOpen 如何都强制显示（forceOpen=true）
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const showSettingsModal = settingsOpen || !settings.configured;
+  const forceSettingsOpen = !settings.configured;
+
+  // Lean 安装引导 Modal 显隐：
+  // - 启动时若 leanInstall.installed=false 自动弹出
+  // - 用户关闭后不再自动弹出，但可通过 header 按钮重新打开
+  const [leanInstallOpen, setLeanInstallOpen] = useState(false);
+  useEffect(() => {
+    if (!leanInstall.loading && !leanInstall.installed) {
+      setLeanInstallOpen(true);
+    }
+  }, [leanInstall.loading, leanInstall.installed]);
 
   // 当文件被修改后保存
   const handleSaveFile = async () => {
@@ -102,6 +127,46 @@ export default function App() {
           thinking 模式
         </label>
         <WorkspaceSwitcher workspace={workspace} />
+        {/* Lean4 状态按钮：未安装时显示警告色，点击重新打开引导 Modal */}
+        <button
+          type="button"
+          onClick={() => setLeanInstallOpen(true)}
+          className="header-lean-status-btn"
+          aria-label="Lean4 安装状态"
+          style={{
+            fontSize: 12,
+            padding: '4px 10px',
+            background: leanInstall.installed ? '#f0fdf4' : '#fef3c7',
+            color: leanInstall.installed ? '#15803d' : '#b45309',
+            border: `1px solid ${leanInstall.installed ? '#bbf7d0' : '#fde68a'}`,
+            borderRadius: 4,
+            cursor: 'pointer',
+          }}
+        >
+          {leanInstall.loading
+            ? 'Lean 检测中...'
+            : leanInstall.installed
+              ? `Lean ✓ ${leanInstall.version ?? ''}`.trim()
+              : 'Lean 未安装'}
+        </button>
+        {/* 设置按钮：显示当前 API Key 配置状态，点击打开 Modal */}
+        <button
+          type="button"
+          onClick={() => setSettingsOpen(true)}
+          className="header-settings-btn"
+          aria-label="API Key 设置"
+          style={{
+            fontSize: 12,
+            padding: '4px 10px',
+            background: settings.configured ? '#f0fdf4' : '#fef3c7',
+            color: settings.configured ? '#15803d' : '#b45309',
+            border: `1px solid ${settings.configured ? '#bbf7d0' : '#fde68a'}`,
+            borderRadius: 4,
+            cursor: 'pointer',
+          }}
+        >
+          {settings.configured ? `已配置 · ${settings.model}` : '未配置 API Key'}
+        </button>
       </header>
 
       <main className="app-main">
@@ -162,6 +227,22 @@ export default function App() {
       {latexModal && (
         <LatexModal latex={latexModal} onClose={() => setLatexModal(null)} />
       )}
+
+      {/* API Key 设置 Modal */}
+      <SettingsModal
+        open={showSettingsModal}
+        currentModel={settings.model}
+        forceOpen={forceSettingsOpen}
+        onSubmit={settings.setApiKey}
+        onClose={() => setSettingsOpen(false)}
+      />
+
+      {/* Lean4 安装引导 Modal */}
+      <LeanInstallModal
+        open={leanInstallOpen}
+        status={leanInstall}
+        onClose={() => setLeanInstallOpen(false)}
+      />
     </div>
   );
 }
