@@ -148,7 +148,10 @@ mod tests {
 
         assert_eq!(v["success"], false);
         assert_eq!(v["path"], "does_not_exist.lean");
-        assert!(!v["error"].as_str().unwrap().is_empty(), "应返回非空错误信息");
+        assert!(
+            !v["error"].as_str().unwrap().is_empty(),
+            "应返回非空错误信息"
+        );
     }
 
     #[tokio::test]

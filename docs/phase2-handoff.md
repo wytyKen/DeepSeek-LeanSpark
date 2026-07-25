@@ -179,6 +179,8 @@
 | FileTree 测试图标多元素匹配 | `frontend/src/components/sidebar/FileTree.test.tsx` | 用 `getAllByText` + 长度断言 | 测试失败 |
 | EventCollapse 文本冲突 | `frontend/src/components/chat/EventCollapse.test.tsx` | 用 `.event-body` 选择器 | 测试失败 |
 | setup.ts 缺 vi 导入 | `frontend/src/test/setup.ts` | 加 `import { vi } from 'vitest'` | `npm run build` 失败 |
+| read_file.rs 测试断言格式不符 rustfmt | `src/tools/read_file.rs:148` | 跑 `cargo fmt --all` 自动格式化 | CI Format check 失败（本地之前误判通过） |
+| actions/cache@v4 触发 Node 20 deprecation | `.github/workflows/ci.yml` | 升级到 `actions/cache@v5` | CI warning（非 fatal，但应清理） |
 
 ---
 
@@ -275,9 +277,10 @@ cargo clippy --manifest-path DeepSeek-LeanSpark/Cargo.toml --all-targets -- -D w
 ## 9. 交接确认
 
 - ✅ 所有测试通过（111 Rust + 49 前端）
-- ✅ `cargo fmt --check` 通过
+- ✅ `cargo fmt --check` 通过（已修复 read_file.rs 格式问题）
 - ✅ `cargo clippy -- -D warnings` 通过
 - ✅ `npm run build` 通过
+- ✅ CI 已修复：fmt 格式 + actions/cache@v5（待 push 后验证）
 - ✅ 工作区干净，所有改动已提交并推送到 GitHub（`main` 分支，最新 `50ba610`）
 - ✅ Tauri 基础框架可用（`cargo tauri dev` 可启动）
 - ✅ GitHub 仓库已存在且为 public：`https://github.com/wytyKen/DeepSeek-LeanSpark`
