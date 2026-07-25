@@ -15,9 +15,9 @@
 | 前端目录 | `DeepSeek-LeanSpark/frontend/` |
 | API Key 配置 | `DeepSeek-LeanSpark/.env`（变量 `DEEPSEEK_API_KEY`，已 gitignore） |
 | 系统提示词 | `DeepSeek-LeanSpark/prompts/agent-prompt.md` |
-| 当前 git 分支 | `main`（跟踪 `origin/main`） |
-| Phase 1 最后提交 | `2629e62`（Fix Tauri desktop shell: try_init） |
-| 未提交改动 | 27 个文件（19 modified + 7 untracked + 1 deleted）：本轮 P0/P1 测试代码、bug 修复、README 重写、交接文档 |
+| 当前 git 分支 | `main`（跟踪 `origin/main`，已同步） |
+| 最新提交 | `3f0b995`（docs: rewrite root README + Phase 2 handoff doc） |
+| 工作区状态 | **干净**（无未提交改动） |
 
 ---
 
@@ -205,31 +205,31 @@ cargo clippy --manifest-path DeepSeek-LeanSpark/Cargo.toml --all-targets -- -D w
 
 ### 6.1 优先级 P0（核心交付）
 
-1. **提交未提交改动**：本轮 P0/P1 测试代码 + bug 修复 + README 重写 + 交接文档（27 个文件），先 commit 推送
-   - 建议拆为 2-3 个 commit：① test+fix（测试代码+bug修复）② docs（README+交接文档）③ chore（删除重复 CodeEditor.tsx）
-   - 或单个 commit：`test: add P0/P1 unit tests, fix critical bugs, rewrite README, add Phase 2 handoff doc`
-2. **修复 lib.rs 启动 panic 风险**（详见 3.1b）：把第 40 行 `expect` 改为延迟初始化，让应用在未配置 key 时能启动显示设置界面
-3. **验证 `cargo tauri build`**：在 Windows 本地跑一次，确认能产出 `.msi` / `.exe`
-4. **Tauri API Key UI**：在应用内提供设置界面，持久化到本地（避免用户编辑 .env）；用户输入后调 `DeepSeekClient::new` 重建客户端
-5. **Lean4 打包策略**：建议方案 B（首次启动引导安装 elan），因为方案 A（打包 lean 二进制）体积过大且平台差异大
+1. **修复 lib.rs 启动 panic 风险**（详见 3.1b）：把第 40 行 `expect` 改为延迟初始化，让应用在未配置 key 时能启动显示设置界面
+2. **验证 `cargo tauri build`**：在 Windows 本地跑一次，确认能产出 `.msi` / `.exe`
+3. **Tauri API Key UI**：在应用内提供设置界面，持久化到本地（避免用户编辑 .env）；用户输入后调 `DeepSeekClient::new` 重建客户端
+4. **Lean4 打包策略**：建议方案 B（首次启动引导安装 elan），因为方案 A（打包 lean 二进制）体积过大且平台差异大
 
 ### 6.2 优先级 P1（分发自动化）
 
-5. **GitHub Actions release workflow**：`.github/workflows/release.yml`，tag 触发，多平台构建（windows-latest / macos-latest / ubuntu-latest），上传 Release assets
-6. **更新 `tauri.conf.json`**：版本号、bundle 配置、可能需要 `externalBin`（若选方案 A）
+5. **GitHub Actions release workflow**：`.github/workflows/release.yml`，tag 触发，多平台构建（windows-latest / macos-latest / ubuntu-latest），上传 Release assets（可参考 ci.yml 结构）
+6. **补全 ci.yml 前端测试**：在 frontend job 的 `npm run build` 前加 `npm test`（当前缺失，见第 7 条第 21 点）
+7. **更新 `tauri.conf.json`**：版本号到 0.2.0、bundle 配置、可能需要 `externalBin`（若选方案 A）
 
 ### 6.3 优先级 P2（文档完善）
 
-7. **创建 `docs/phase2.md`**：设计文档，记录决策、架构、使用方式
-8. **更新根 `README.md`**：把 Phase 2 状态从"待完成"改为"已完成"，更新使用方式
-9. **更新 `DeepSeek-LeanSpark/README.md`**：补充 Tauri 桌面形态的详细使用说明
-10. **更新 `docs/phase1.5-design.md`**：添加指向 phase2.md 的链接
+8. **创建 `docs/phase2.md`**：设计文档，记录决策、架构、使用方式、lib.rs panic 修复方案
+9. **更新根 `README.md`**：把 Phase 2 状态从"待完成"改为"已完成"，更新使用方式
+10. **更新 `DeepSeek-LeanSpark/README.md`**：补充 Tauri 桌面形态的详细使用说明
+11. **更新 `docs/phase1.5-design.md`**：添加指向 phase2.md 的链接
+12. **补充 .env.example 安全注释**：LISTEN_ADDR=0.0.0.0:3000 加警告说明生产部署应改 127.0.0.1 或用反向代理
 
 ### 6.4 收尾
 
-11. **全量测试**：`cargo test --lib` + `npm test -- --run` + `cargo clippy` + `cargo fmt --check`
-12. **提交并推送**：`git add` + `git commit` + `git push`
-13. **打 tag 触发 release**：`git tag v0.2.0` + `git push origin v0.2.0`
+13. **全量测试**：`cargo test --lib` + `npm test -- --run` + `cargo clippy` + `cargo fmt --check`
+14. **提交并推送**：`git add` + `git commit` + `git push origin main`
+15. **打 tag 触发 release**：`git tag v0.2.0` + `git push origin v0.2.0`
+16. **验证 Release**：检查 GitHub Actions release workflow 成功，安装包出现在 Releases 页面
 
 ---
 
@@ -277,15 +277,15 @@ cargo clippy --manifest-path DeepSeek-LeanSpark/Cargo.toml --all-targets -- -D w
 - ✅ `cargo fmt --check` 通过
 - ✅ `cargo clippy -- -D warnings` 通过
 - ✅ `npm run build` 通过
-- ⚠️ 有 27 个文件未提交（19 modified + 7 untracked + 1 deleted），Phase 2 执行者需先提交（或交接者现在提交）
+- ✅ 工作区干净，所有改动已提交并推送到 GitHub（`main` 分支，最新 `3f0b995`）
 - ✅ Tauri 基础框架可用（`cargo tauri dev` 可启动）
 - ✅ GitHub 仓库已存在且为 public：`https://github.com/wytyKen/DeepSeek-LeanSpark`
 - ✅ CI（ci.yml）基本配置正确并通过（Node 22 + checkout@v5 + elan）
 - ✅ `.env` 已 gitignore，`.env` 文件存在但不会被提交
 - ✅ `Cargo.lock` 已跟踪
-- ❌ `cargo tauri build` 未验证（Phase 2 任务）
-- ❌ Release workflow 不存在（Phase 2 任务）
-- ❌ `docs/phase2.md` 不存在（Phase 2 任务）
-- ❌ lib.rs 启动 panic 风险未修复（Phase 2 添加 UI 前必须处理，详见 3.1b）
-- ❌ ci.yml 前端 job 缺 `npm test` 步骤（Phase 2 应补上，详见第 7 条第 21 点）
-- ❌ .env.example 的 LISTEN_ADDR 缺安全警告注释（Phase 2 建议补充，详见第 7 条第 22 点）
+- ❌ `cargo tauri build` 未验证（Phase 2 任务，步骤 2）
+- ❌ Release workflow 不存在（Phase 2 任务，步骤 5）
+- ❌ `docs/phase2.md` 不存在（Phase 2 任务，步骤 8）
+- ❌ lib.rs 启动 panic 风险未修复（Phase 2 步骤 1 必须处理，详见 3.1b）
+- ❌ ci.yml 前端 job 缺 `npm test` 步骤（Phase 2 步骤 6 应补上，详见第 7 条第 21 点）
+- ❌ .env.example 的 LISTEN_ADDR 缺安全警告注释（Phase 2 步骤 12 建议补充，详见第 7 条第 22 点）
